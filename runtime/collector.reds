@@ -193,13 +193,6 @@ collector: context [
 			
 			loop count [
 				node: as node! n/value
-				if collector/refs <> null [
-					new: _hashtable/rs-get collector/refs as-integer node
-					if new <> null [
-						;probe ["freeing node: " node ", new: " as node! new/value]
-						node: as node! new/value
-					]
-				]
 				while [
 					frm: as int-ptr! p/value + size? node-frame!
 					not all [frm <= node  node < as node! ((as byte-ptr! frm) + w)]
@@ -212,6 +205,18 @@ collector: context [
 			]
 			count: 0
 		]
+	]
+
+	flush-refs: func [/local n [integer!] kv [int-ptr!] h [int-ptr!]][
+		h: refs
+		n: _hashtable/rs-size? h
+
+		kv: null
+		loop n [
+			kv: _hashtable/rs-next h kv
+			nodes-list/store as node! kv/1
+		]
+		nodes-list/flush
 	]
 	
 	enough-target-slots?: func [
@@ -264,7 +269,7 @@ collector: context [
 				;print-line ["relocating node: " slot " from frame " src " to " dst " (new: " new ")"]
 				s: as series! ptr
 				s/node: new								;-- update back-reference
-				src/used: src/used - 1
+				;src/used: src/used - 1					;-- free-node will decrease it
 				dst/used: dst/used + 1
 			]
 			slot: slot + 1
@@ -1017,13 +1022,13 @@ collector: context [
 		collect-series-frames COLLECTOR_RELEASE
 		collect-big-frames
 		nodes-list/flush
-		collect-node-frames
-
 		if refs <> null [
+			flush-refs
 			_hashtable/rs-destroy refs					;-- clear all the node entries
 			refs: null
 		]
-	
+		collect-node-frames
+
 		;-- unmark fixed series
 		unmark root/node
 		unmark arg-stk/node
