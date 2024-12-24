@@ -322,11 +322,12 @@ collector: context [
 	][
 		if refs <> null [
 			new: _hashtable/rs-get refs ptr/value
-			if new <> null [
+			while [new <> null] [	;@@ node may have been moved more than once
 				;probe ["(keep) ptr: " ptr ", node: " as node! ptr/value ", new: " as node! new/value]
 				ptr/value: new/value
+				new: _hashtable/rs-get refs ptr/value
 			]
-		]	
+		]
 		node: as node! ptr/value
 		s: as series! node/value
 		flags: s/flags
