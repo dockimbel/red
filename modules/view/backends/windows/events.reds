@@ -1828,8 +1828,18 @@ process: func [
 	]
 ]
 
+flushing?: no
+
+flush-events: func [hWnd [handle!]][
+	if flushing? [exit]
+	flushing?: yes
+	until [not do-events yes hWnd]
+	flushing?: no
+]
+
 do-events: func [
 	no-wait? [logic!]
+	hWnd	 [handle!]									;-- null to catch events for all faces
 	return:  [logic!]
 	/local
 		msg	  [tagMSG value]
@@ -1843,9 +1853,9 @@ do-events: func [
 
 	while [
 		either no-wait? [
-			0 < PeekMessage :msg null 0 0 1
+			0 < PeekMessage :msg hWnd 0 0 1
 		][
-			0 < GetMessage :msg null 0 0
+			0 < GetMessage :msg hWnd 0 0
 		]
 	][
 		unless msg? [msg?: yes]
